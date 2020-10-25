@@ -14,11 +14,11 @@
 #define DATA  11  ///< SPI Data pin number
 #define CLK   13  ///< SPI Clock pin number
 
-int X = 0;  // 0-1 Sine or Triangle Wave
-int Y = 0; // 0-20 Frequencies
-int Z = 0;  // 0-3 Phase
-int A = 0; // 0-1 off/on
-int H = 0; // Harmonic for gen2
+int waveindex = 0;  // 0-1 Sine or Triangle Wave
+int freqindex = 0; // 0-20 Frequencies
+int phaseindex = 0;  // 0-3 Phase
+int signalindex = 0; // 0-1 off/on
+int harmonicindex = 0; // Harmonic for gen2
 
 int wave[4] = {SINE_WAVE, TRIANGLE_WAVE, SQUARE_WAVE, HALF_SQUARE_WAVE}; // not using the square waves
 int freq[21] = {330, 330, 330, 440, 466, 494, 523, 554, 587, 622, 659, 698, 740, 784, 831, 927, 1024, 2048, 4096, 4096, 4096};
@@ -48,11 +48,14 @@ int lastpotV = 0;
 // Note, SCK and MOSI must be connected to CLK and DAT pins on the AD9833 for SPI
 AD9833 gen(FNC_PIN);       // Defaults to 25MHz internal reference frequency
 AD9833 gen2(FNC_PIN2);       // Defaults to 25MHz internal reference frequency
+
+
 void setup() {
   // This MUST be the first command after declaring the AD9833 object
   gen.Begin();
   gen2.Begin();
 
+  Serial.begin(115200);
 
   // button code
   pinMode(buttonPin1, INPUT);
@@ -79,28 +82,23 @@ void setup() {
 
 void loop() {
 
-  int WS = wave[X]; // 0-3
-  int FS = freq[Y]; // 0-11
-  int PS = phas[Z]; // 0-2
-  int SG = sgnl[A]; // 0-1
-  int HM = hmon[H]; // harmonic multiplier
-
   buttonState1 = digitalRead(buttonPin1); // read the pushbutton input pin:
   buttonState2 = digitalRead(buttonPin2); // read the pushbutton input pin:
   potV = analogRead(pot); // read the potentiometer analog input pin:
   buttonState3 = digitalRead(buttonPin3); // read the pushbutton input pin:
- 
-  potV = map(potV, 0, 1023, 1, 21);
-  Y = potV;
-//  Y = constrain(Y, 0, 21);  // limits range of sensor values to between 10 and 150
+
+  potV = map(potV, 0, 1023, 1, 20);
+  freqindex = potV;
+  Serial.print(freqindex); 
+  freqindex = constrain(freqindex, 0, 20);  // limits range of sensor values to between 10 and 150
 
   if (buttonState1 != lastButtonState1) { // compare the buttonState to its previous state
 
     if (buttonState1 == HIGH) {
-      ++X;
+      ++waveindex;
 
-      if (X >= 4) {
-        X = 0;
+      if (waveindex >= 4) {
+        waveindex = 0;
       }
     }
   }
@@ -108,10 +106,10 @@ void loop() {
   if (buttonState2 != lastButtonState2) { // compare the buttonState to its previous state
 
     if (buttonState2 == HIGH) {
-      ++A;
+      ++signalindex;
 
-      if (A >= 2) {
-        A = 0;
+      if (signalindex >= 2) {
+        signalindex = 0;
       }
     }
   }
@@ -119,13 +117,19 @@ void loop() {
   if (buttonState3 != lastButtonState3) { // compare the buttonState to its previous state
 
     if (buttonState3 == HIGH) {
-      ++H;
+      ++harmonicindex;
 
-      if (H >= 7) {
-        H = 0;
+      if (harmonicindex >= 7) {
+        harmonicindex = 0;
       }
     }
   }
+
+  int WS = wave[waveindex]; // 0-3
+  int FS = freq[freqindex]; // 0-11
+  int PS = phas[phaseindex]; // 0-2
+  int SG = sgnl[signalindex]; // 0-1
+  int HM = hmon[harmonicindex]; // harmonic multiplier
 
   if (buttonState1 != lastButtonState1) {
     gen.ApplySignal(WS, REG0, FS, PS);
@@ -154,5 +158,6 @@ void loop() {
   lastButtonState2 = buttonState2;
   lastButtonState3 = buttonState3;  
   lastpotV = potV;
+  
 
 } // loop
