@@ -30,19 +30,22 @@ int hmon[6] = {2, 3, 4, 5, 6, 7}; // add harmonic content on second ad9833
 const int buttonPin1 = 3;     // the number of the pushbutton pin
 int buttonState1 = 0;         // current state of the button
 int lastButtonState1 = 0;     // previous state of the button
+int lastwaveindex = 0;
 
 const int buttonPin2 = 2;     // the number of the pushbutton pin
 int buttonState2 = 0;         // current state of the button
 int lastButtonState2 = 0;     // previous state of the button
+int lastsignalindex = 0;
 
 const int buttonPin3 = 6;     // the number of the pushbutton pin
 int buttonState3 = 0;         // current state of the button
 int lastButtonState3 = 0;     // previous state of the button
+int lastharmonicindex = 0;
 
 const int pot = A0;    // select the input pin for the potentiometer
 int potV = 0;  // variable to store the value coming from the sensor
 int lastpotV = 0;
-
+int lastfreqindex = 0;
 
 //--------------- Create an AD9833 object ----------------
 // Note, SCK and MOSI must be connected to CLK and DAT pins on the AD9833 for SPI
@@ -131,23 +134,23 @@ void loop() {
   int SG = sgnl[signalindex]; // 0-1
   int HM = hmon[harmonicindex]; // harmonic multiplier
 
-  if (buttonState1 != lastButtonState1) {
+  if (waveindex != lastwaveindex) {
     gen.ApplySignal(WS, REG0, FS, PS);
     gen2.ApplySignal(WS, REG0, HM*FS, PS);    
   }
 
-  if (potV != lastpotV) {
+  if (freqindex != lastfreqindex) {
     gen.ApplySignal(WS, REG0, FS, PS);
     gen2.ApplySignal(WS, REG0, HM*FS, PS);       
   }
 
-  if (buttonState2 != lastButtonState2) {
+  if (signalindex != lastsignalindex) {
     gen.EnableOutput(SG);   // Turn ON the output - it defaults to OFF
     gen2.EnableOutput(SG);   // Turn ON the output - it defaults to OFF      
   }
 
 
-  if (buttonState3 != lastButtonState3) {
+  if (harmonicindex != lastharmonicindex) {
     gen.ApplySignal(WS, REG0, FS, PS);    
     gen2.ApplySignal(WS, REG0, HM*FS, PS);       
   }
@@ -158,6 +161,9 @@ void loop() {
   lastButtonState2 = buttonState2;
   lastButtonState3 = buttonState3;  
   lastpotV = potV;
-  
+  lastfreqindex = freqindex;
+  lastwaveindex = waveindex;
+  lastharmonicindex = harmonicindex; 
+  lastsignalindex = signalindex;
 
 } // loop
