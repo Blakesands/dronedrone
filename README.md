@@ -1,2 +1,2 @@
 # dronedrone
-An Arduino (nano) based musical drone box using 2 AD9833 Waveform Generators, some warm diode fuzz and an LM880 Audio amplifier with 2 250mW speakers and a minijack out. It has 3 pots and 4 buttons and uses the AD9833 library by Bill Williams. 
+An Arduino based musical drone Shruti box using AD9833 Waveform Generators, some warm diode fuzz and an LM880 Audio amplifier with 2 speakers and a minijack out. It has 3 pots and 4 buttons and uses the AD9833 library by Bill Williams. My first bit of coding and the code is pretty simple. I've commented everything so should be good for other learners. There are loads of values to mess with to get different sounds out of the box.
