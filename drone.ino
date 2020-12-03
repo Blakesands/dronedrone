@@ -13,8 +13,8 @@
         Rotary Encoder
             Rotate CW = increase generator frequency or volume
             Rotate CCW = decrease generator frequency or volume
-            Short Press = step between different sensitivities for freq/vol adjust
-            Long Press = step between controlling fre_B, fre_C, vol_B, vol_C
+            Long Press = step between different sensitivities for frequency adjust
+            Short Press = step between controlling fre_A, fre_B, fre_C, vol_B, vol_C
     Outs:
         128 x 64 OLED Screen i2C
         Mono 3.5mm audio Minijack
@@ -42,18 +42,15 @@
 /* rotary encoder */
 #define ROTARY_LONG_PRESS 2
 #define ROTARY_SHORT_PRESS 1
-SimpleRotary rotary(9,8,7); // pins for rotary encoder
-
-double rotary_sens []= {0.1, 1, 10}; // multiplier for increase in value as pot turns
+SimpleRotary rotary(9,8,7); 
+double rotary_sens []= {0.1, 1.0, 10.0}; // multiplier for increase in value as dial turns
 int SENSE = 0; // index to rotary_sens
-
+int gen_param = 4; // which generator/value is being adjusted by the rotary dial
 #define frequency_B 0
 #define frequency_C 1
 #define volume_B 2
 #define volume_C 3
 #define frequency_A 4
-
-int gen_param = 4; // which generator/value is being adjusted 
 
 /* Keypad stuff */
 #define ROWS 1 // Define keypad 1 row
@@ -62,7 +59,6 @@ char keys[ROWS][COLS] = {{'1','2','3','4'}};
 byte rowPins[ROWS] = {A6}; 
 byte colPins[COLS] = {A0, A1, A2, A3}; 
 Keypad keypad = Keypad( makeKeymap(keys), rowPins, colPins, ROWS, COLS );
-char key = 0;
 
 /* oled stuff */
 #define SDA_PIN -1 // A4
@@ -78,27 +74,22 @@ SSOLED ssoled;
 #define MCP_DIGITAL_POT_SLAVE_SELECT_PIN 10 
 McpDigitalPot digitalPot = McpDigitalPot( MCP_DIGITAL_POT_SLAVE_SELECT_PIN, 10000.00 );
 
-/* Global Variables */
-
 /* Fundamental frequencies for chords */
 double fun_array[15] = { 220.000000, 233.081881, 246.941651, 261.625565, 277.182631, 293.664768, 
     311.126984, 329.627557, 349.228231, 369.994423, 391.995436, 415.304698, 440.0, 110.0, 55.0 };
 
 /* Strings for oled display */
-char* chord_name1 [10] = {"Maj ", "Min ", "Maj7", "Min7", "Dim ", "Dim7", "Aug ", "Aug7", "3OSC", "HIGH"};
-char* fun_name [15] = {"A3","A#","B ","C ","C#","D ","D#","E ","F ","F#","G ","G#", "A4", "A2", "A1"};
+char* chord_name [10] = {"Maj ", "Min ", "Maj7", "Min7", "Dim ", "Dim7", "Aug ", "Aug7", "3OSC", "HIGH"};
+char* note_name [15] = {"A3","A#","B ","C ","C#","D ","D#","E ","F ","F#","G ","G#", "A4", "A2", "A1"};
 
 int chord = 8; // initialise to OSC3 for oscillator test and splash screen
 int fundamental_f = 0;
-
 double fre_A = 220.0; // main frequencies for ad9833s
 double fre_B = 226.7;
 double fre_C = 211.1;
 double trim_A = 0.0;  // frequency trim control for gens C and B
 double trim_B = 0.0;
 double trim_C = 0.0;
-double shift1 = 0; // plays chords relative to fre_A
-double shift2 = 0;
 
 int vol_B = 100; // volume control for gens C and B
 int vol_C = 100;
@@ -114,11 +105,6 @@ int wave_on_C[8] = {0, 1, 0 ,0, 1, 0, 1, 1};
 int wave_A = 0;
 int wave_B = 1;
 int wave_C = 0;
-
-// /* debugging */
-// const double semitone =  1.0; //1.059463;
-// const double tune_gen2 = 1.0;
-// const double tune_gen3 = 1.0; // .9925;
 
 /* create ad9833 instances */
 AD9833 gen(FNC_PIN); 
@@ -139,7 +125,7 @@ void setup() {
     rotary.setDebounceDelay(10);
     rotary.setErrorDelay(50);
  
-    // oled stuff // Standard HW I2C bus at 400Khz
+    // oled stuff 
     oledInit(&ssoled, OLED_128x64, OLED_ADDR, FLIP180, INVERT, USE_HW_I2C, SDA_PIN, SCL_PIN, RESET_PIN, 400000L);  
 
     // splash and initialisation
@@ -157,22 +143,18 @@ void setup() {
 }
 
 void loop(){
-    
     int rotary_dial = rotary.rotate();
     if (rotary_dial) {
         check_rotary_dial (rotary_dial);
     }
-
     char keypress = keypad.getKey();
     if (keypress){
         check_keypad (keypress);
     }
-
     int rotary_button = rotary.pushType(500);
     if (rotary_button) {
         check_rotary_btn (rotary_button);
     }
-   
 }
 
 void check_rotary_dial (int rotary_dial) {
@@ -351,7 +333,6 @@ void reset_param () {
 }
 
 void play_chord (double fundamental, int chord_name){ 
-
     int chords[10][2] = {
         {4,7}, // "Major"
         {3,7}, // "Minor"
@@ -364,14 +345,13 @@ void play_chord (double fundamental, int chord_name){
         {0,0}, // "3 OSC"
         {7,14}, // "High"
     };
-
-    int shift1 = chords[chord][0];
-    int shift2 = chords[chord][1];
+    int chord_shift_B = chords[chord_name][0];
+    int chord_shift_C = chords[chord_name][1];
     fre_A = fundamental;
-    fre_B = pow(double (2),double (shift1/12))*fundamental;
-    fre_C = pow(double (2),double (shift2/12))*fundamental;
+    fre_B = pow(double (2),double (chord_shift_B/12))*fundamental;
+    fre_C = pow(double (2),double (chord_shift_C/12))*fundamental;
     gen.ApplySignal (hwave[wave_A],REG0,(fre_A+trim_A),0); 
-    gen2.ApplySignal(hwave[wave_B],REG0,(fre_B+trim_B),0); // *.9925
+    gen2.ApplySignal(hwave[wave_B],REG0,(fre_B+trim_B),0);
     gen3.ApplySignal(hwave[wave_C],REG0,(fre_C+trim_C),0);
     update_oled ();
 }
@@ -382,8 +362,8 @@ void update_oled (){ // updates whole screen
     oled_gen ();
     oled_vol (); 
     oled_wave ();
-    oledWriteString(&ssoled, 0, 0, 2, fun_name [fundamental_f] , FONT_STRETCHED, 0, 1);
-    oledWriteString(&ssoled, 0, 43, 2, chord_name1 [chord] , FONT_STRETCHED, 0, 1);  
+    oledWriteString(&ssoled, 0, 0, 2, note_name [fundamental_f] , FONT_STRETCHED, 0, 1);
+    oledWriteString(&ssoled, 0, 43, 2, chord_name [chord] , FONT_STRETCHED, 0, 1);  
 }
 
 void oled_wave (){ // updates wave stars
@@ -471,11 +451,8 @@ void oled_freq_C (){
     oledWriteString(&ssoled, 0, 86, 5, buffer_C, FONT_SMALL, 0, 1); 
 }
 
-/*  
-    Enables AD9833s one by one and displays amusing captions
-*/
+// Enables AD9833s one by one and displays amusing captions
 void splash_screen () {
-
     oledFill(&ssoled, 0, 1);
     gen.EnableOutput(true); 
     oledWriteString(&ssoled, 0, 0, 0, "WaveGen A Check", FONT_SMALL, 0, 1);
@@ -497,12 +474,10 @@ void splash_screen () {
     };
 
     const int messageCount = sizeof(messageList) / sizeof(messageList[0]);
-
     for (int i; i < messageCount; i++) {
         oledWriteString(&ssoled, 0, 0, 2, messageList[i], FONT_SMALL, 0, 1);
         delay(100);
     }
-    
     gen3.EnableOutput(true);
     oledWriteString(&ssoled, 0, 0, 0, "WaveGen B Check", FONT_SMALL, 0, 1);
     oledWriteString(&ssoled, 0, 0, 1, "INITIALISING:", FONT_SMALL, 0, 1);
@@ -523,12 +498,10 @@ void splash_screen () {
     };
 
     const int messageCount2 = sizeof(messageList2) / sizeof(messageList2[0]);
-
     for (int i; i < messageCount2; i++) {
         oledWriteString(&ssoled, 0, 0, 2, messageList2[i], FONT_SMALL, 0, 1);
         delay(100);
     }
-
     gen2.EnableOutput(true);
     oledWriteString(&ssoled, 0, 0, 0, "WaveGen C Check", FONT_SMALL, 0, 1);
     oledWriteString(&ssoled, 0, 0, 1, "SCREAM INITIALISED", FONT_SMALL, 0, 1);
@@ -549,12 +522,10 @@ void splash_screen () {
     };
 
     const int messageCount3 = sizeof(messageList3) / sizeof(messageList3[0]);
-
     for (int i; i < messageCount3; i++) {
         oledWriteString(&ssoled, 0, 0, 1, messageList3[i], FONT_SMALL, 0, 1);
         delay(100);
     }
-
     oledFill(&ssoled, 0, 1);
     oledWriteString(&ssoled, 0, 0, 0, "ronedronedronedronedroned", FONT_SMALL, 1, 1); // stays static
     reset_param ();
